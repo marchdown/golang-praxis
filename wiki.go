@@ -1,9 +1,11 @@
 package main
 
 import (
-       "fmt"
-       "io/ioutil"
-       "os"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"http"
 )
 
 type Page struct {		  
@@ -28,9 +30,20 @@ func loadPage(title string) (*Page, os.Error) {
 	return &Page{Title: title, Body:body}, nil
 }
 
+const lenPath = len("/view/")
+var port = flag.String("port", "2048", "TCP port for inbound connections")
+
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+	title := r.URL.Path[lenPath:]
+	p, _ := loadPage(title)
+	fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", p.Title, p.Body)
+}
+
 func main() {
 	p1 := &Page{Title: "TestPage", Body: []byte("I'm a test page.")}
 	p1.save()
 	p2, _ := loadPage("TestPage")
-	fmt.Println(string(p2.Body))
+	flag.Parse()
+	http.HandleFunc("/view/", viewHandler)
+	http.ListenAndServe(":" + *port, nil)
 }

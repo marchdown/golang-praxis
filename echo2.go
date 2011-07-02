@@ -5,7 +5,7 @@ import (
 	"flag"
 )
 
-var ( // Process flags, save logic state.
+var ( // 
 	printNewlineAtTheEnd = flag.Bool("n", true, "Print final newline")
 
 	)
