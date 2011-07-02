@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"http"
-//	"template"
+	"template"
 )
 
 type Page struct {		  
@@ -60,12 +60,8 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		p = &Page{Title: title}
 	}
-	fmt.Fprintf(w, "<h1>Editing %s</h1>"+
-		"<form action=\"/save/%s\" method=\"POST\">"+
-		"<textarea name=\"body\">%s</textarea><br>"+
-		"<input type=\"submit\" value=\"Save\">"+
-		"</form>",
-		p.Title, p.Title, p.Body)
+	t, _ := template.ParseFile("edit.html", nil)
+	t.Execute(w, p)
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
