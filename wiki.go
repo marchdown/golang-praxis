@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+//	"fmt"
 	"io/ioutil"
 	"os"
 	"http"
@@ -16,6 +16,7 @@ type Page struct {
 // Page struct describes what's in memory
 // How do we store it on disk?
 
+var templates = make(map[string]*template.Template)
 func (p *Page) save() os.Error {
 	// We're passing the return value of WriteFile which has type os.Error
 	filename := p.Title + ".txt"
@@ -36,10 +37,49 @@ var port = flag.String("port", "2048", "TCP port for inbound connections")
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	title := r.URL.Path[lenPath:]
-	p, _ := loadPage(title)
-	fmt.Fprintf(w, "<h1>%s</h1><div>%s</div>", p.Title, p.Body)
+	p, err := loadPage(title)
+	if err != nil {
+		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+		return
+	}
+	renderTemplate(w, "view", p)
 }
 
+func editHandler(w http.ResponseWriter, r *http.Request) {
+	title := r.URL.Path[len("/edit/"):]
+	p, err := loadPage(title)
+	if err != nil {
+		p = &Page{Title: title}
+	}
+	renderTemplate(w, "edit", p)
+}
+func saveHandler(w http.ResponseWriter, r *http.Request) {
+//	title := r.URL.Path[lenPath:]
+	title, err := getTitle(w, r)
+	if err != nil {
+		return
+	}
+	body := r.FormValue("body")
+	p := &Page{Title: title, Body: []byte(body)}
+	err = p.save()
+	if err != nil {
+		http.Error(w, err.String(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+	t, err := template.ParseFile(tmpl+".html", nil)
+	if err != nil {
+		http.Error(w, err.String(), http.StatusInternalServerError)
+		return
+	}
+	err = t.Execute(w, p)
+	if err != nil {
+		http.Error(w, err.String(), http.StatusInternalServerError)
+	}
+
+}
 func main() {
 //	p1 := &Page{Title: "TestPage", Body: []byte("I'm a test page.")}
 //	p1.save()
@@ -49,21 +89,4 @@ func main() {
 	http.HandleFunc("/edit/", editHandler)
 	http.HandleFunc("/save/", saveHandler)
 	http.ListenAndServe(":" + *port, nil)
-}
-
-
-//now write the last two handlers.
-
-func editHandler(w http.ResponseWriter, r *http.Request) {
-	title := r.URL.Path[len("/edit/"):]
-	p, err := loadPage(title)
-	if err != nil {
-		p = &Page{Title: title}
-	}
-	t, _ := template.ParseFile("edit.html", nil)
-	t.Execute(w, p)
-}
-
-func saveHandler(w http.ResponseWriter, r *http.Request) {
-//code code
 }
