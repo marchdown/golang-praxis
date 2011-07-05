@@ -1,8 +1,8 @@
 package main
 
 import (
+	"regexp"
 	"flag"
-//	"fmt"
 	"io/ioutil"
 	"os"
 	"http"
@@ -13,10 +13,14 @@ type Page struct {
      Title string		  
      Body []byte // []byte and not string because io libs work on bytes
 }
-// Page struct describes what's in memory
-// How do we store it on disk?
 
 var templates = make(map[string]*template.Template)
+func init () {
+	for _, tmpl := range []string{"edit", "view"} {
+		templates[tmpl] = template.MustParseFile("templates/"+tmpl+".html", nil)
+	}
+}
+
 func (p *Page) save() os.Error {
 	// We're passing the return value of WriteFile which has type os.Error
 	filename := p.Title + ".txt"
@@ -69,16 +73,19 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
-	t, err := template.ParseFile(tmpl+".html", nil)
-	if err != nil {
-		http.Error(w, err.String(), http.StatusInternalServerError)
-		return
-	}
-	err = t.Execute(w, p)
+	err := templates[tmpl].Execute(w,p)
 	if err != nil {
 		http.Error(w, err.String(), http.StatusInternalServerError)
 	}
-
+}
+var titleValidator = regexp.MustCompile("^[a-zA-Z0-9]+$")
+func getTitle(w http.ResponseWriter, r *http.Request) (title string, err os.Error) {
+	title = r.URL.Path[lenPath:]
+	if !titleValidator.MatchString(title) {
+		http.NotFound(w, r)
+		err = os.NewError("Invalid Page Title")
+	}
+	return
 }
 func main() {
 //	p1 := &Page{Title: "TestPage", Body: []byte("I'm a test page.")}

@@ -1,2 +1,2 @@
 #!/usr/lib/plan9/bin/rc
-8g $*(1)^.go && 8l -o $*(1) $*(1)^.8 && ./$*(1)
+8g $*(1)^.go && 8l -o $*(1) $*(1)^.8 && ./$*(1); echo "Compiled and running"
